@@ -3,74 +3,214 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>MC Vanilla Banner Generator</title>
+  <title>MC Vanilla Banner Generator v3 (Original Image Match)</title>
   <style>
-    :root { --bg: #0e0e12; --card: #17171f; --accent: #e11d48; --text: #f4f4f6; --muted: #9ca3af; }
-    * { box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; }
-    body { margin: 0; background: var(--bg); color: var(--text); display: flex; justify-content: center; padding: 2rem 1rem; }
-    .container { max-width: 900px; width: 100%; display: grid; gap: 1.5rem; }
-    .card { background: var(--card); border: 1px solid #272734; border-radius: 12px; padding: 1.5rem; }
-    h1 { margin: 0 0 0.5rem; font-size: 1.5rem; }
-    .controls { display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; margin-top: 1rem; }
-    input[type="file"], select, button {
-      background: #22222e; color: var(--text); border: 1px solid #363646;
-      padding: 0.6rem 1rem; border-radius: 8px; cursor: pointer; font-size: 0.95rem;
+    :root {
+      --bg: #0c0c10;
+      --card: #15151d;
+      --card2: #1d1d28;
+      --accent: #e11d48;
+      --accent2: #fb7185;
+      --text: #f4f4f6;
+      --muted: #9ca3af;
+      --border: #2a2a3a;
     }
-    button.primary { background: var(--accent); border-color: var(--accent); font-weight: 600; }
-    .preview-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1.5rem; text-align: center; }
-    canvas { image-rendering: pixelated; width: 140px; height: 280px; border: 2px solid #323242; border-radius: 6px; background: #000; }
-    .steps { display: grid; gap: 0.6rem; margin-top: 1rem; }
-    .step-item { display: flex; align-items: center; gap: 0.75rem; background: #1f1f2a; padding: 0.6rem 0.9rem; border-radius: 8px; }
-    .swatch { width: 18px; height: 18px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.3); }
-    textarea { width: 100%; height: 72px; background: #111118; color: #a5f3fc; border: 1px solid #2c2c3a; border-radius: 8px; padding: 0.75rem; font-family: monospace; font-size: 0.85rem; }
+    * { box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      justify-content: center;
+      padding: 2rem 1rem;
+    }
+    .container { max-width: 1020px; width: 100%; display: grid; gap: 1.5rem; }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 1.5rem;
+    }
+    h1 { margin: 0 0 0.35rem; font-size: 1.5rem; }
+    .sub { color: var(--muted); margin: 0; font-size: 0.95rem; }
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.9rem;
+      align-items: center;
+      margin-top: 1.1rem;
+    }
+    .sliders {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+      gap: 1rem;
+      margin-top: 1.1rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--border);
+    }
+    .slider-box {
+      background: var(--card2);
+      padding: 0.7rem 0.9rem;
+      border-radius: 10px;
+      font-size: 0.85rem;
+    }
+    .slider-box label { display: flex; justify-content: space-between; margin-bottom: 0.4rem; color: #d1d5db; }
+    input[type="range"] { width: 100%; accent-color: var(--accent); cursor: pointer; }
+    input[type="file"], select, button {
+      background: var(--card2);
+      color: var(--text);
+      border: 1px solid #38384c;
+      padding: 0.6rem 0.95rem;
+      border-radius: 9px;
+      cursor: pointer;
+      font-size: 0.92rem;
+    }
+    button.primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      font-weight: 600;
+    }
+    button.primary:hover { background: var(--accent2); }
+    .preview-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1.5rem;
+      align-items: start;
+      text-align: center;
+    }
+    canvas {
+      image-rendering: pixelated;
+      max-width: 100%;
+      width: 170px;
+      height: 300px;
+      border: 2px solid #353548;
+      border-radius: 8px;
+      background: #000;
+    }
+    .steps { display: grid; gap: 0.55rem; text-align: left; }
+    .step-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.6rem;
+      background: var(--card2);
+      padding: 0.55rem 0.8rem;
+      border-radius: 9px;
+      font-size: 0.88rem;
+    }
+    .step-left { display: flex; align-items: center; gap: 0.65rem; }
+    .swatch {
+      width: 18px;
+      height: 18px;
+      border-radius: 5px;
+      border: 1px solid rgba(255,255,255,0.35);
+      flex-shrink: 0;
+    }
+    .gain { font-size: 0.78rem; color: #86efac; white-space: nowrap; }
+    textarea {
+      width: 100%;
+      height: 76px;
+      background: #0f0f15;
+      color: #67e8f9;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0.75rem;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.83rem;
+    }
+    .status { font-size: 0.85rem; color: var(--muted); margin-top: 0.6rem; }
   </style>
 </head>
 <body>
   <div class="container">
     <div class="card">
-      <h1>Minecraft Vanilla Banner Generator</h1>
-      <p style="color: var(--muted); margin: 0;">Upload any image to compute the closest 6-layer survival Loom banner recipe.</p>
+      <h1>Minecraft Vanilla Banner Generator <span style="color:var(--accent2);font-size:0.9rem;">v3 Original-Size Solver</span></h1>
+      <p class="sub">Evaluates banner layers directly against the uploaded image resolution & aspect ratio using OKLab + edge loss.</p>
+
       <div class="controls">
         <input type="file" id="imgInput" accept="image/*" />
+        <select id="matchMode">
+          <option value="original" selected>Original Image Size (Smart Cap)</option>
+          <option value="native20x40">Native 20×40 Banner Grid</option>
+        </select>
         <select id="fitMode">
-          <option value="cover">Crop to Fit (20×40)</option>
-          <option value="contain">Letterbox / Fit Whole Image</option>
-          <option value="stretch">Stretch</option>
+          <option value="cover">Crop to Fill Banner</option>
+          <option value="contain">Fit Whole Image (Letterbox)</option>
+          <option value="stretch">Stretch to Banner</option>
         </select>
         <select id="maxLayers">
           <option value="6" selected>6 Layers (Survival Max)</option>
           <option value="5">5 Layers</option>
           <option value="4">4 Layers</option>
         </select>
-        <button class="primary" id="generateBtn">Generate Banner</button>
+        <button class="primary" id="generateBtn">Generate From Original</button>
       </div>
+
+      <div class="sliders">
+        <div class="slider-box">
+          <label><span>Max Eval Width</span><span id="maxWVal">100 px</span></label>
+          <input type="range" id="maxEvalW" min="40" max="160" step="10" value="100" />
+        </div>
+        <div class="slider-box">
+          <label><span>Contrast</span><span id="contrastVal">1.35×</span></label>
+          <input type="range" id="contrast" min="0.7" max="2.2" step="0.05" value="1.35" />
+        </div>
+        <div class="slider-box">
+          <label><span>Posterize Levels</span><span id="posterizeVal">0 (Off)</span></label>
+          <input type="range" id="posterize" min="0" max="8" step="1" value="0" />
+        </div>
+        <div class="slider-box">
+          <label><span>Edge Weight</span><span id="edgeVal">0.55</span></label>
+          <input type="range" id="edgeWeight" min="0" max="1.4" step="0.05" value="0.55" />
+        </div>
+      </div>
+
+      <div class="status" id="statusText">Upload an image to begin.</div>
     </div>
 
     <div class="card preview-grid">
       <div>
-        <h3>Target (20×40)</h3>
+        <h3>Target Preview</h3>
         <canvas id="targetCanvas" width="20" height="40"></canvas>
       </div>
       <div>
-        <h3>Generated Banner</h3>
+        <h3>Banner Result (20×40)</h3>
         <canvas id="resultCanvas" width="20" height="40"></canvas>
       </div>
       <div>
-        <h3>Loom Steps</h3>
-        <div id="stepsList" class="steps" style="text-align: left;"></div>
+        <h3>Loom Recipe & Gain</h3>
+        <div id="stepsList" class="steps"></div>
       </div>
     </div>
 
     <div class="card">
       <h3 style="margin-top: 0;">Java 1.21+ /give Command</h3>
-      <textarea id="cmdOutput" readonly placeholder="Upload an image and click Generate..."></textarea>
+      <textarea id="cmdOutput" readonly placeholder="Generated /give command will appear here..."></textarea>
     </div>
   </div>
 
   <script>
-    const W = 20, H = 40;
+    const BANNER_W = 20, BANNER_H = 40;
+    const el = id => document.getElementById(id);
 
-    // Official Minecraft banner dye RGB values
+    function srgbToOklab(r8, g8, b8) {
+      let r = r8 / 255, g = g8 / 255, b = b8 / 255;
+      r = r > 0.04045 ? Math.pow((r + 0.055) / 1.055, 2.4) : r / 12.92;
+      g = g > 0.04045 ? Math.pow((g + 0.055) / 1.055, 2.4) : g / 12.92;
+      b = b > 0.04045 ? Math.pow((b + 0.055) / 1.055, 2.4) : b / 12.92;
+
+      const l = 0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b;
+      const m = 0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b;
+      const s = 0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b;
+
+      const l_ = Math.cbrt(l), m_ = Math.cbrt(m), s_ = Math.cbrt(s);
+      return [
+        0.2104542553 * l_ + 0.7936177850 * m_ - 0.0040720468 * s_,
+        1.9779984951 * l_ - 2.4285922050 * m_ + 0.4505937099 * s_,
+        0.0259040371 * l_ + 0.7827717662 * m_ - 0.8086757660 * s_
+      ];
+    }
+
     const DYES = [
       { id: "white",      name: "White",      rgb: [249, 255, 254] },
       { id: "orange",     name: "Orange",     rgb: [249, 128, 29]  },
@@ -88,134 +228,205 @@
       { id: "green",      name: "Green",      rgb: [94, 124, 22]   },
       { id: "red",        name: "Red",        rgb: [176, 46, 38]   },
       { id: "black",      name: "Black",      rgb: [29, 29, 33]    }
+    ].map(d => ({ ...d, lab: srgbToOklab(...d.rgb) }));
+
+    // Base 20x40 pattern definitions
+    const PATTERN_DEFS = [
+      ["stripe_bottom", "Base (Bottom Stripe)", (x, y) => y >= 30 ? 1 : 0],
+      ["stripe_top", "Chief (Top Stripe)", (x, y) => y < 10 ? 1 : 0],
+      ["stripe_left", "Pale Dexter (Left Stripe)", (x, y) => x < 7 ? 1 : 0],
+      ["stripe_right", "Pale Sinister (Right Stripe)", (x, y) => x >= 13 ? 1 : 0],
+      ["stripe_center", "Pale (Vertical Center)", (x, y) => (x >= 7 && x < 13) ? 1 : 0],
+      ["stripe_middle", "Fess (Horizontal Center)", (x, y) => (y >= 14 && y < 26) ? 1 : 0],
+      ["half_horizontal", "Per Fess (Top Half)", (x, y) => y < 20 ? 1 : 0],
+      ["half_horizontal_bottom", "Per Fess Inverted (Bottom Half)", (x, y) => y >= 20 ? 1 : 0],
+      ["half_vertical", "Per Pale (Left Half)", (x, y) => x < 10 ? 1 : 0],
+      ["half_vertical_right", "Per Pale Inverted (Right Half)", (x, y) => x >= 10 ? 1 : 0],
+      ["cross", "Cross", (x, y) => ((x >= 7 && x < 13) || (y >= 14 && y < 26)) ? 1 : 0],
+      ["straight_cross", "Saltire (X Cross)", (x, y) =>
+        (Math.abs(x * 2 - y) <= 4 || Math.abs((BANNER_W - 1 - x) * 2 - y) <= 4) ? 1 : 0],
+      ["stripe_downright", "Bend (Top-Left to Bottom-Right)", (x, y) =>
+        Math.abs(x * 2 - y) <= 4 ? 1 : 0],
+      ["stripe_downleft", "Bend Sinister (Top-Right to Bottom-Left)", (x, y) =>
+        Math.abs((BANNER_W - 1 - x) * 2 - y) <= 4 ? 1 : 0],
+      ["diagonal_left", "Per Bend Sinister (Top-Left)", (x, y) => (x * 2 + y) < 40 ? 1 : 0],
+      ["diagonal_right", "Per Bend (Top-Right)", (x, y) => ((BANNER_W - 1 - x) * 2 + y) < 40 ? 1 : 0],
+      ["diagonal_up_left", "Per Bend Inverted (Bottom-Left)", (x, y) => (x * 2 + (BANNER_H - 1 - y)) < 40 ? 1 : 0],
+      ["diagonal_up_right", "Per Bend Sinister Inverted (Bottom-Right)", (x, y) => ((BANNER_W - 1 - x) * 2 + (BANNER_H - 1 - y)) < 40 ? 1 : 0],
+      ["triangle_bottom", "Chevron", (x, y) => y >= 40 - Math.abs(x - 9.5) * 2 ? 1 : 0],
+      ["triangle_top", "Inverted Chevron", (x, y) => y < Math.abs(x - 9.5) * 2 ? 1 : 0],
+      ["triangles_bottom", "Base Indented", (x, y) => y >= 34 + ((x % 4 < 2) ? 0 : 3) ? 1 : 0],
+      ["triangles_top", "Chief Indented", (x, y) => y < 6 - ((x % 4 < 2) ? 0 : 3) ? 1 : 0],
+      ["circle", "Roundel (Center Circle)", (x, y) => Math.hypot(x - 9.5, (y - 19.5) * 0.5) <= 4.5 ? 1 : 0],
+      ["rhombus", "Lozenge (Diamond)", (x, y) => (Math.abs(x - 9.5) / 8 + Math.abs(y - 19.5) / 14) <= 1 ? 1 : 0],
+      ["border", "Bordure (Border)", (x, y) => (x < 2 || x >= 18 || y < 2 || y >= 38) ? 1 : 0],
+      ["curly_border", "Bordure Indented", (x, y) =>
+        (x < 2 || x >= 18 || y < 2 || y >= 38 || ((x === 2 || x === 17) && y % 3 === 0)) ? 1 : 0],
+      ["square_bottom_left", "Base Dexter Canton", (x, y) => (x < 8 && y >= 30) ? 1 : 0],
+      ["square_bottom_right", "Base Sinister Canton", (x, y) => (x >= 12 && y >= 30) ? 1 : 0],
+      ["square_top_left", "Chief Dexter Canton", (x, y) => (x < 8 && y < 10) ? 1 : 0],
+      ["square_top_right", "Chief Sinister Canton", (x, y) => (x >= 12 && y < 10) ? 1 : 0],
+      ["small_stripes", "Paly (Vertical Stripes)", (x, y) => (x % 5 < 2) ? 1 : 0],
+      ["gradient", "Gradient (Top-Down)", (x, y) => 1 - y / (BANNER_H - 1)],
+      ["gradient_up", "Base Gradient (Bottom-Up)", (x, y) => y / (BANNER_H - 1)]
     ];
 
-    // Generate 20x40 alpha masks (0.0 to 1.0) for standard Loom patterns
-    function buildPatterns() {
-      const list = [];
-      const add = (id, name, fn) => {
-        const mask = new Float32Array(W * H);
-        for (let y = 0; y < H; y++) {
-          for (let x = 0; x < W; x++) {
-            mask[y * W + x] = Math.max(0, Math.min(1, fn(x, y)));
+    // Build pattern masks for a given evaluation grid (w x h) by sampling banner coordinates (0..20, 0..40)
+    function buildScaledPatterns(w, h) {
+      return PATTERN_DEFS.map(([id, name, fn]) => {
+        const mask = new Float32Array(w * h);
+        for (let py = 0; py < h; py++) {
+          const by = ((py + 0.5) / h) * BANNER_H - 0.5;
+          for (let px = 0; px < w; px++) {
+            const bx = ((px + 0.5) / w) * BANNER_W - 0.5;
+            mask[py * w + px] = Math.max(0, Math.min(1, fn(bx, by)));
           }
         }
-        list.push({ id, name, mask });
-      };
-
-      // Stripes & Halves
-      add("stripe_bottom", "Base (Bottom Stripe)", (x, y) => y >= 30 ? 1 : 0);
-      add("stripe_top", "Chief (Top Stripe)", (x, y) => y < 10 ? 1 : 0);
-      add("stripe_left", "Pale Dexter (Left Stripe)", (x, y) => x < 7 ? 1 : 0);
-      add("stripe_right", "Pale Sinister (Right Stripe)", (x, y) => x >= 13 ? 1 : 0);
-      add("stripe_center", "Pale (Vertical Center)", (x, y) => (x >= 7 && x < 13) ? 1 : 0);
-      add("stripe_middle", "Fess (Horizontal Center)", (x, y) => (y >= 14 && y < 26) ? 1 : 0);
-      add("half_horizontal", "Per Fess (Top Half)", (x, y) => y < 20 ? 1 : 0);
-      add("half_horizontal_bottom", "Per Fess Inverted (Bottom Half)", (x, y) => y >= 20 ? 1 : 0);
-      add("half_vertical", "Per Pale (Left Half)", (x, y) => x < 10 ? 1 : 0);
-      add("half_vertical_right", "Per Pale Inverted (Right Half)", (x, y) => x >= 10 ? 1 : 0);
-
-      // Crosses & Diagonals
-      add("cross", "Cross", (x, y) => ((x >= 7 && x < 13) || (y >= 14 && y < 26)) ? 1 : 0);
-      add("straight_cross", "Saltire (X Cross)", (x, y) => Math.abs(x * 2 - y) <= 4 || Math.abs((W - 1 - x) * 2 - y) <= 4 ? 1 : 0);
-      add("stripe_downright", "Bend (Top-Left to Bottom-Right)", (x, y) => Math.abs(x * 2 - y) <= 4 ? 1 : 0);
-      add("stripe_downleft", "Bend Sinister (Top-Right to Bottom-Left)", (x, y) => Math.abs((W - 1 - x) * 2 - y) <= 4 ? 1 : 0);
-      add("diagonal_left", "Per Bend Sinister (Top-Left Diagonal)", (x, y) => (x * 2 + y) < 40 ? 1 : 0);
-      add("diagonal_right", "Per Bend (Top-Right Diagonal)", (x, y) => ((W - 1 - x) * 2 + y) < 40 ? 1 : 0);
-      add("diagonal_up_left", "Per Bend Inverted (Bottom-Left Diagonal)", (x, y) => (x * 2 + (H - 1 - y)) < 40 ? 1 : 0);
-      add("diagonal_up_right", "Per Bend Sinister Inverted (Bottom-Right Diagonal)", (x, y) => ((W - 1 - x) * 2 + (H - 1 - y)) < 40 ? 1 : 0);
-
-      // Triangles & Chevrons
-      add("triangle_bottom", "Chevron", (x, y) => y >= 40 - Math.abs(x - 9.5) * 2 ? 1 : 0);
-      add("triangle_top", "Inverted Chevron", (x, y) => y < Math.abs(x - 9.5) * 2 ? 1 : 0);
-      add("triangles_bottom", "Base Indented", (x, y) => y >= 34 + ((x % 4 < 2) ? 0 : 3) ? 1 : 0);
-      add("triangles_top", "Chief Indented", (x, y) => y < 6 - ((x % 4 < 2) ? 0 : 3) ? 1 : 0);
-
-      // Shapes & Borders
-      add("circle", "Roundel (Center Circle)", (x, y) => Math.hypot(x - 9.5, (y - 19.5) * 0.5) <= 4.5 ? 1 : 0);
-      add("rhombus", "Lozenge (Diamond)", (x, y) => (Math.abs(x - 9.5) / 8 + Math.abs(y - 19.5) / 14) <= 1 ? 1 : 0);
-      add("border", "Bordure (Border)", (x, y) => (x < 2 || x >= 18 || y < 2 || y >= 38) ? 1 : 0);
-      add("curly_border", "Bordure Indented", (x, y) => (x < 2 || x >= 18 || y < 2 || y >= 38 || ((x === 2 || x === 17) && y % 3 === 0)) ? 1 : 0);
-      add("square_bottom_left", "Base Dexter Canton", (x, y) => (x < 8 && y >= 30) ? 1 : 0);
-      add("square_bottom_right", "Base Sinister Canton", (x, y) => (x >= 12 && y >= 30) ? 1 : 0);
-      add("square_top_left", "Chief Dexter Canton", (x, y) => (x < 8 && y < 10) ? 1 : 0);
-      add("square_top_right", "Chief Sinister Canton", (x, y) => (x >= 12 && y < 10) ? 1 : 0);
-      add("small_stripes", "Paly (Vertical Stripes)", (x, y) => (x % 5 < 2) ? 1 : 0);
-
-      // Gradients
-      add("gradient", "Gradient (Top-Down)", (x, y) => 1 - y / (H - 1));
-      add("gradient_up", "Base Gradient (Bottom-Up)", (x, y) => y / (H - 1));
-
-      return list;
+        return { id, name, mask };
+      });
     }
 
-    const PATTERNS = buildPatterns();
     let loadedImage = null;
+    let evalW = BANNER_W, evalH = BANNER_H;
+    let scaledPatterns = buildScaledPatterns(evalW, evalH);
 
-    document.getElementById("imgInput").addEventListener("change", (e) => {
+    ["maxEvalW", "contrast", "posterize", "edgeWeight"].forEach(id => {
+      el(id).addEventListener("input", () => {
+        el("maxWVal").textContent = `${el("maxEvalW").value} px`;
+        el("contrastVal").textContent = `${Number(el("contrast").value).toFixed(2)}×`;
+        const p = Number(el("posterize").value);
+        el("posterizeVal").textContent = p === 0 ? "0 (Off)" : `${p} levels`;
+        el("edgeVal").textContent = Number(el("edgeWeight").value).toFixed(2);
+        if (loadedImage) prepareTarget();
+      });
+    });
+
+    ["matchMode", "fitMode"].forEach(id => {
+      el(id).addEventListener("change", () => { if (loadedImage) prepareTarget(); });
+    });
+
+    el("imgInput").addEventListener("change", e => {
       const file = e.target.files[0];
       if (!file) return;
       const img = new Image();
       img.onload = () => {
         loadedImage = img;
-        drawTarget();
+        prepareTarget();
+        el("statusText").textContent =
+          `Loaded ${img.width}×${img.height} image. Ready to solve at ${evalW}×${evalH} evaluation grid.`;
       };
       img.src = URL.createObjectURL(file);
     });
 
-    document.getElementById("fitMode").addEventListener("change", () => { if (loadedImage) drawTarget(); });
+    function computeEvalDimensions(img) {
+      if (!img || el("matchMode").value === "native20x40") {
+        return { w: BANNER_W, h: BANNER_H };
+      }
+      const maxW = parseInt(el("maxEvalW").value, 10);
+      const maxH = maxW * 2;
+      let w = img.width;
+      let h = img.height;
+      const scale = Math.min(1, maxW / w, maxH / h);
+      w = Math.max(10, Math.round(w * scale));
+      h = Math.max(20, Math.round(h * scale));
+      return { w, h };
+    }
 
-    function drawTarget() {
-      const canvas = document.getElementById("targetCanvas");
-      const ctx = canvas.getContext("2d");
-      ctx.fillStyle = "#1d1d21";
-      ctx.fillRect(0, 0, W, H);
+    function prepareTarget() {
       if (!loadedImage) return;
+      const dims = computeEvalDimensions(loadedImage);
+      if (dims.w !== evalW || dims.h !== evalH) {
+        evalW = dims.w;
+        evalH = dims.h;
+        scaledPatterns = buildScaledPatterns(evalW, evalH);
+      }
 
-      const mode = document.getElementById("fitMode").value;
+      const canvas = el("targetCanvas");
+      canvas.width = evalW;
+      canvas.height = evalH;
+      const ctx = canvas.getContext("2d");
+      ctx.imageSmoothingEnabled = true;
+      ctx.fillStyle = "#1d1d21";
+      ctx.fillRect(0, 0, evalW, evalH);
+
+      const mode = el("fitMode").value;
       const iw = loadedImage.width, ih = loadedImage.height;
-      const targetRatio = W / H, imgRatio = iw / ih;
+      const targetRatio = evalW / evalH;
+      const imgRatio = iw / ih;
 
       if (mode === "stretch") {
-        ctx.drawImage(loadedImage, 0, 0, W, H);
+        ctx.drawImage(loadedImage, 0, 0, evalW, evalH);
       } else if (mode === "cover") {
         let sx = 0, sy = 0, sw = iw, sh = ih;
-        if (imgRatio > targetRatio) {
-          sw = ih * targetRatio;
-          sx = (iw - sw) / 2;
-        } else {
-          sh = iw / targetRatio;
-          sy = (ih - sh) / 2;
-        }
-        ctx.drawImage(loadedImage, sx, sy, sw, sh, 0, 0, W, H);
+        if (imgRatio > targetRatio) { sw = ih * targetRatio; sx = (iw - sw) / 2; }
+        else { sh = iw / targetRatio; sy = (ih - sh) / 2; }
+        ctx.drawImage(loadedImage, sx, sy, sw, sh, 0, 0, evalW, evalH);
       } else {
-        let dw = W, dh = H, dx = 0, dy = 0;
-        if (imgRatio > targetRatio) {
-          dh = W / imgRatio;
-          dy = (H - dh) / 2;
-        } else {
-          dw = H * imgRatio;
-          dx = (W - dw) / 2;
-        }
+        let dw = evalW, dh = evalH, dx = 0, dy = 0;
+        if (imgRatio > targetRatio) { dh = evalW / imgRatio; dy = (evalH - dh) / 2; }
+        else { dw = evalH * imgRatio; dx = (evalW - dw) / 2; }
         ctx.drawImage(loadedImage, dx, dy, dw, dh);
+      }
+
+      const contrast = Number(el("contrast").value);
+      const posterize = Number(el("posterize").value);
+      if (contrast !== 1 || posterize > 0) {
+        const imgData = ctx.getImageData(0, 0, evalW, evalH);
+        const d = imgData.data;
+        for (let i = 0; i < d.length; i += 4) {
+          for (let c = 0; c < 3; c++) {
+            let v = (d[i + c] / 255 - 0.5) * contrast + 0.5;
+            v = Math.max(0, Math.min(1, v));
+            if (posterize > 0) v = Math.round(v * (posterize - 1)) / (posterize - 1);
+            d[i + c] = Math.round(v * 255);
+          }
+        }
+        ctx.putImageData(imgData, 0, 0);
       }
     }
 
-    function computeError(buf, target) {
-      let err = 0;
-      for (let i = 0; i < W * H * 3; i += 3) {
-        const dr = buf[i] - target[i];
-        const dg = buf[i + 1] - target[i + 1];
-        const db = buf[i + 2] - target[i + 2];
-        // Weighted perceptual RGB distance
-        err += 0.3 * dr * dr + 0.59 * dg * dg + 0.11 * db * db;
+    function extractLightness(buf, n) {
+      const lum = new Float32Array(n);
+      for (let p = 0; p < n; p++) {
+        lum[p] = srgbToOklab(buf[p * 3], buf[p * 3 + 1], buf[p * 3 + 2])[0];
       }
-      return err;
+      return lum;
+    }
+
+    function computeLoss(buf, lum, targetLab, targetLum, edgeWeight) {
+      const n = evalW * evalH;
+      let loss = 0;
+
+      for (let p = 0; p < n; p++) {
+        const [L, a, b] = srgbToOklab(buf[p * 3], buf[p * 3 + 1], buf[p * 3 + 2]);
+        const dL = (L - targetLab[p * 3]) * 1.15;
+        const da = (a - targetLab[p * 3 + 1]) * 1.35;
+        const db = (b - targetLab[p * 3 + 2]) * 1.35;
+        loss += dL * dL + da * da + db * db;
+      }
+
+      if (edgeWeight > 0) {
+        let edgeLoss = 0;
+        for (let y = 0; y < evalH - 1; y++) {
+          for (let x = 0; x < evalW - 1; x++) {
+            const p = y * evalW + x;
+            const gxCur = lum[p + 1] - lum[p];
+            const gyCur = lum[p + evalW] - lum[p];
+            const gxTgt = targetLum[p + 1] - targetLum[p];
+            const gyTgt = targetLum[p + evalW] - targetLum[p];
+            edgeLoss += (gxCur - gxTgt) ** 2 + (gyCur - gyTgt) ** 2;
+          }
+        }
+        loss += (edgeWeight * edgeLoss * n) / Math.max(1, (evalW - 1) * (evalH - 1));
+      }
+
+      return loss / n;
     }
 
     function applyLayer(baseBuf, mask, rgb) {
       const out = new Uint8ClampedArray(baseBuf.length);
-      for (let p = 0; p < W * H; p++) {
+      const n = evalW * evalH;
+      for (let p = 0; p < n; p++) {
         const a = mask[p];
         const idx = p * 3;
         if (a === 0) {
@@ -231,93 +442,169 @@
       return out;
     }
 
-    document.getElementById("generateBtn").addEventListener("click", () => {
-      if (!loadedImage) return alert("Please upload an image first.");
-      drawTarget();
+    function simulateSequence(baseDye, layers, targetLab, targetLum, edgeWeight) {
+      const n = evalW * evalH;
+      let buf = new Uint8ClampedArray(n * 3);
+      for (let p = 0; p < n; p++) {
+        buf[p * 3]     = baseDye.rgb[0];
+        buf[p * 3 + 1] = baseDye.rgb[1];
+        buf[p * 3 + 2] = baseDye.rgb[2];
+      }
+      const stepLosses = [computeLoss(buf, extractLightness(buf, n), targetLab, targetLum, edgeWeight)];
+      for (const layer of layers) {
+        buf = applyLayer(buf, layer.pattern.mask, layer.dye.rgb);
+        stepLosses.push(computeLoss(buf, extractLightness(buf, n), targetLab, targetLum, edgeWeight));
+      }
+      return {
+        base: baseDye,
+        layers: layers.slice(),
+        loss: stepLosses[stepLosses.length - 1],
+        stepLosses
+      };
+    }
 
-      const tCtx = document.getElementById("targetCanvas").getContext("2d");
-      const raw = tCtx.getImageData(0, 0, W, H).data;
-      const target = new Uint8ClampedArray(W * H * 3);
-      for (let p = 0; p < W * H; p++) {
-        target[p * 3]     = raw[p * 4];
-        target[p * 3 + 1] = raw[p * 4 + 1];
-        target[p * 3 + 2] = raw[p * 4 + 2];
+    function renderBanner20x40(best) {
+      let buf = new Uint8ClampedArray(BANNER_W * BANNER_H * 3);
+      const n = BANNER_W * BANNER_H;
+      for (let p = 0; p < n; p++) {
+        buf[p * 3]     = best.base.rgb[0];
+        buf[p * 3 + 1] = best.base.rgb[1];
+        buf[p * 3 + 2] = best.base.rgb[2];
+      }
+      const nativePatterns = buildScaledPatterns(BANNER_W, BANNER_H);
+      const byId = new Map(nativePatterns.map(p => [p.id, p]));
+      for (const l of best.layers) {
+        const pat = byId.get(l.pattern.id);
+        const next = new Uint8ClampedArray(n * 3);
+        for (let p = 0; p < n; p++) {
+          const a = pat.mask[p];
+          const idx = p * 3;
+          next[idx]     = buf[idx]     * (1 - a) + l.dye.rgb[0] * a;
+          next[idx + 1] = buf[idx + 1] * (1 - a) + l.dye.rgb[1] * a;
+          next[idx + 2] = buf[idx + 2] * (1 - a) + l.dye.rgb[2] * a;
+        }
+        buf = next;
       }
 
-      const maxLayers = parseInt(document.getElementById("maxLayers").value, 10);
-      const BEAM_WIDTH = 6;
-
-      // Step 0: Evaluate all 16 base banner colors
-      let beam = DYES.map(dye => {
-        const buf = new Uint8ClampedArray(W * H * 3);
-        for (let p = 0; p < W * H; p++) {
-          buf[p * 3] = dye.rgb[0];
-          buf[p * 3 + 1] = dye.rgb[1];
-          buf[p * 3 + 2] = dye.rgb[2];
-        }
-        return { base: dye, layers: [], buf, error: computeError(buf, target) };
-      }).sort((a, b) => a.error - b.error).slice(0, BEAM_WIDTH);
-
-      // Steps 1..N: Beam search over all (pattern, dye) combinations
-      for (let step = 0; step < maxLayers; step++) {
-        const candidates = [];
-        for (const state of beam) {
-          candidates.push(state); // Allow stopping early if no layer improves score
-          for (const pat of PATTERNS) {
-            for (const dye of DYES) {
-              const nextBuf = applyLayer(state.buf, pat.mask, dye.rgb);
-              const err = computeError(nextBuf, target);
-              candidates.push({
-                base: state.base,
-                layers: [...state.layers, { pattern: pat, dye }],
-                buf: nextBuf,
-                error: err
-              });
-            }
-          }
-        }
-        candidates.sort((a, b) => a.error - b.error);
-        beam = candidates.slice(0, BEAM_WIDTH);
-      }
-
-      const best = beam[0];
-      renderResult(best);
-    });
-
-    function renderResult(best) {
-      const rCanvas = document.getElementById("resultCanvas");
+      const rCanvas = el("resultCanvas");
       const rCtx = rCanvas.getContext("2d");
-      const imgData = rCtx.createImageData(W, H);
-      for (let p = 0; p < W * H; p++) {
-        imgData.data[p * 4]     = best.buf[p * 3];
-        imgData.data[p * 4 + 1] = best.buf[p * 3 + 1];
-        imgData.data[p * 4 + 2] = best.buf[p * 3 + 2];
+      const imgData = rCtx.createImageData(BANNER_W, BANNER_H);
+      for (let p = 0; p < n; p++) {
+        imgData.data[p * 4]     = buf[p * 3];
+        imgData.data[p * 4 + 1] = buf[p * 3 + 1];
+        imgData.data[p * 4 + 2] = buf[p * 3 + 2];
         imgData.data[p * 4 + 3] = 255;
       }
       rCtx.putImageData(imgData, 0, 0);
+    }
 
-      // Render Loom steps
-      const stepsEl = document.getElementById("stepsList");
+    el("generateBtn").addEventListener("click", () => {
+      if (!loadedImage) {
+        el("statusText").textContent = "Please upload an image first.";
+        return;
+      }
+      prepareTarget();
+      const n = evalW * evalH;
+      const tCtx = el("targetCanvas").getContext("2d");
+      const raw = tCtx.getImageData(0, 0, evalW, evalH).data;
+      const targetRgb = new Uint8ClampedArray(n * 3);
+      const targetLab = new Float32Array(n * 3);
+      for (let p = 0; p < n; p++) {
+        const r = raw[p * 4], g = raw[p * 4 + 1], b = raw[p * 4 + 2];
+        targetRgb[p * 3] = r;
+        targetRgb[p * 3 + 1] = g;
+        targetRgb[p * 3 + 2] = b;
+        const lab = srgbToOklab(r, g, b);
+        targetLab[p * 3] = lab[0];
+        targetLab[p * 3 + 1] = lab[1];
+        targetLab[p * 3 + 2] = lab[2];
+      }
+      const targetLum = extractLightness(targetRgb, n);
+      const edgeWeight = Number(el("edgeWeight").value);
+      const maxLayers = parseInt(el("maxLayers").value, 10);
+      const BEAM_WIDTH = 12;
+
+      let beam = DYES.map(dye => simulateSequence(dye, [], targetLab, targetLum, edgeWeight))
+        .sort((a, b) => a.loss - b.loss)
+        .slice(0, BEAM_WIDTH);
+
+      for (let step = 0; step < maxLayers; step++) {
+        const candidates = [];
+        for (const state of beam) {
+          for (const pat of scaledPatterns) {
+            for (const dye of DYES) {
+              candidates.push(
+                simulateSequence(state.base, [...state.layers, { pattern: pat, dye }], targetLab, targetLum, edgeWeight)
+              );
+            }
+          }
+        }
+        candidates.sort((a, b) => a.loss - b.loss);
+        const nextBeam = [];
+        const baseCounts = new Map();
+        for (const cand of candidates) {
+          const cnt = baseCounts.get(cand.base.id) || 0;
+          if (cnt < 4) {
+            nextBeam.push(cand);
+            baseCounts.set(cand.base.id, cnt + 1);
+            if (nextBeam.length >= BEAM_WIDTH) break;
+          }
+        }
+        beam = nextBeam;
+      }
+
+      let best = beam[0];
+      for (let pass = 0; pass < 2; pass++) {
+        let improved = false;
+        for (let idx = 0; idx < best.layers.length; idx++) {
+          const orig = best.layers[idx];
+          for (const pat of scaledPatterns) {
+            for (const dye of DYES) {
+              if (pat.id === orig.pattern.id && dye.id === orig.dye.id) continue;
+              const trial = best.layers.slice();
+              trial[idx] = { pattern: pat, dye };
+              const sim = simulateSequence(best.base, trial, targetLab, targetLum, edgeWeight);
+              if (sim.loss < best.loss - 1e-6) {
+                best = sim;
+                improved = true;
+              }
+            }
+          }
+        }
+        if (!improved) break;
+      }
+
+      renderBanner20x40(best);
+      const stepsEl = el("stepsList");
       stepsEl.innerHTML = "";
-      const addStep = (label, rgb) => {
+      const initialLoss = best.stepLosses[0] || 1;
+      const addStep = (label, rgb, gainText = "") => {
         const div = document.createElement("div");
         div.className = "step-item";
-        div.innerHTML = `<span class="swatch" style="background: rgb(${rgb.join(",")})"></span><span>${label}</span>`;
+        div.innerHTML = `
+          <div class="step-left">
+            <span class="swatch" style="background: rgb(${rgb.join(",")})"></span>
+            <span>${label}</span>
+          </div>
+          ${gainText ? `<span class="gain">${gainText}</span>` : ""}
+        `;
         stepsEl.appendChild(div);
       };
 
       addStep(`Base: <b>${best.base.name} Banner</b>`, best.base.rgb);
       best.layers.forEach((l, i) => {
-        addStep(`${i + 1}. <b>${l.dye.name}</b> — ${l.pattern.name}`, l.dye.rgb);
+        const pct = (((best.stepLosses[i] - best.stepLosses[i + 1]) / initialLoss) * 100).toFixed(1);
+        addStep(`${i + 1}. <b>${l.dye.name}</b> — ${l.pattern.name}`, l.dye.rgb, `-${pct}% err`);
       });
 
-      // Build Java 1.21+ /give command
       const patternNbt = best.layers
         .map(l => `{pattern:"minecraft:${l.pattern.id}",color:"${l.dye.id}"}`)
         .join(",");
-      document.getElementById("cmdOutput").value =
+      el("cmdOutput").value =
         `/give @p minecraft:${best.base.id}_banner[minecraft:banner_patterns=[${patternNbt}]] 1`;
-    }
+      el("statusText").textContent =
+        `Solved at ${evalW}×${evalH} (from ${loadedImage.width}×${loadedImage.height}) with ${best.layers.length} layers.`;
+    });
   </script>
 </body>
 </html>
