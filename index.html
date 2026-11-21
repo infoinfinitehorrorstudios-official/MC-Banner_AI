@@ -1,1 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MC Vanilla Banner Generator</title>
+  <style>
+    :root { --bg: #0e0e12; --card: #17171f; --accent: #e11d48; --text: #f4f4f6; --muted: #9ca3af; }
+    * { box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; }
+    body { margin: 0; background: var(--bg); color: var(--text); display: flex; justify-content: center; padding: 2rem 1rem; }
+    .container { max-width: 900px; width: 100%; display: grid; gap: 1.5rem; }
+    .card { background: var(--card); border: 1px solid #272734; border-radius: 12px; padding: 1.5rem; }
+    h1 { margin: 0 0 0.5rem; font-size: 1.5rem; }
+    .controls { display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; margin-top: 1rem; }
+    input[type="file"], select, button {
+      background: #22222e; color: var(--text); border: 1px solid #363646;
+      padding: 0.6rem 1rem; border-radius: 8px; cursor: pointer; font-size: 0.95rem;
+    }
+    button.primary { background: var(--accent); border-color: var(--accent); font-weight: 600; }
+    .preview-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1.5rem; text-align: center; }
+    canvas { image-rendering: pixelated; width: 140px; height: 280px; border: 2px solid #323242; border-radius: 6px; background: #000; }
+    .steps { display: grid; gap: 0.6rem; margin-top: 1rem; }
+    .step-item { display: flex; align-items: center; gap: 0.75rem; background: #1f1f2a; padding: 0.6rem 0.9rem; border-radius: 8px; }
+    .swatch { width: 18px; height: 18px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.3); }
+    textarea { width: 100%; height: 72px; background: #111118; color: #a5f3fc; border: 1px solid #2c2c3a; border-radius: 8px; padding: 0.75rem; font-family: monospace; font-size: 0.85rem; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <h1>Minecraft Vanilla Banner Generator</h1>
+      <p style="color: var(--muted); margin: 0;">Upload any image to compute the closest 6-layer survival Loom banner recipe.</p>
+      <div class="controls">
+        <input type="file" id="imgInput" accept="image/*" />
+        <select id="fitMode">
+          <option value="cover">Crop to Fit (20×40)</option>
+          <option value="contain">Letterbox / Fit Whole Image</option>
+          <option value="stretch">Stretch</option>
+        </select>
+        <select id="maxLayers">
+          <option value="6" selected>6 Layers (Survival Max)</option>
+          <option value="5">5 Layers</option>
+          <option value="4">4 Layers</option>
+        </select>
+        <button class="primary" id="generateBtn">Generate Banner</button>
+      </div>
+    </div>
 
+    <div class="card preview-grid">
+      <div>
+        <h3>Target (20×40)</h3>
+        <canvas id="targetCanvas" width="20" height="40"></canvas>
+      </div>
+      <div>
+        <h3>Generated Banner</h3>
+        <canvas id="resultCanvas" width="20" height="40"></canvas>
+      </div>
+      <div>
+        <h3>Loom Steps</h3>
+        <div id="stepsList" class="steps" style="text-align: left;"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3 style="margin-top: 0;">Java 1.21+ /give Command</h3>
+      <textarea id="cmdOutput" readonly placeholder="Upload an image and click Generate..."></textarea>
+    </div>
+  </div>
+
+  <script>
+    const W = 20, H = 40;
+
+    // Official Minecraft banner dye RGB values
+    const DYES = [
+      { id: "white",      name: "White",      rgb: [249, 255, 254] },
+      { id: "orange",     name: "Orange",     rgb: [249, 128, 29]  },
+      { id: "magenta",    name: "Magenta",    rgb: [199, 78, 189]  },
+      { id: "light_blue", name: "Light Blue", rgb: [58, 179, 218]  },
+      { id: "yellow",     name: "Yellow",     rgb: [254, 216, 61]  },
+      { id: "lime",       name: "Lime",       rgb: [128, 199, 31]  },
+      { id: "pink",       name: "Pink",       rgb: [243, 139, 170] },
+      { id: "gray",       name: "Gray",       rgb: [71, 79, 82]    },
+      { id: "light_gray", name: "Light Gray", rgb: [157, 157, 151] },
+      { id: "cyan",       name: "Cyan",       rgb: [22, 156, 156]  },
+      { id: "purple",     name: "Purple",     rgb: [137, 50, 184]  },
+      { id: "blue",       name: "Blue",       rgb: [60, 68, 170]   },
+      { id: "brown",      name: "Brown",      rgb: [131, 84, 50]   },
+      { id: "green",      name: "Green",      rgb: [94, 124, 22]   },
+      { id: "red",        name: "Red",        rgb: [176, 46, 38]   },
+      { id: "black",      name: "Black",      rgb: [29, 29, 33]    }
+    ];
+
+    // Generate 20x40 alpha masks (0.0 to 1.0) for standard Loom patterns
+    function buildPatterns() {
+      const list = [];
+      const add = (id, name, fn) => {
+        const mask = new Float32Array(W * H);
+        for (let y = 0; y < H; y++) {
+          for (let x = 0; x < W; x++) {
+            mask[y * W + x] = Math.max(0, Math.min(1, fn(x, y)));
+          }
+        }
+        list.push({ id, name, mask });
+      };
+
+      // Stripes & Halves
+      add("stripe_bottom", "Base (Bottom Stripe)", (x, y) => y >= 30 ? 1 : 0);
+      add("stripe_top", "Chief (Top Stripe)", (x, y) => y < 10 ? 1 : 0);
+      add("stripe_left", "Pale Dexter (Left Stripe)", (x, y) => x < 7 ? 1 : 0);
+      add("stripe_right", "Pale Sinister (Right Stripe)", (x, y) => x >= 13 ? 1 : 0);
+      add("stripe_center", "Pale (Vertical Center)", (x, y) => (x >= 7 && x < 13) ? 1 : 0);
+      add("stripe_middle", "Fess (Horizontal Center)", (x, y) => (y >= 14 && y < 26) ? 1 : 0);
+      add("half_horizontal", "Per Fess (Top Half)", (x, y) => y < 20 ? 1 : 0);
+      add("half_horizontal_bottom", "Per Fess Inverted (Bottom Half)", (x, y) => y >= 20 ? 1 : 0);
+      add("half_vertical", "Per Pale (Left Half)", (x, y) => x < 10 ? 1 : 0);
+      add("half_vertical_right", "Per Pale Inverted (Right Half)", (x, y) => x >= 10 ? 1 : 0);
+
+      // Crosses & Diagonals
+      add("cross", "Cross", (x, y) => ((x >= 7 && x < 13) || (y >= 14 && y < 26)) ? 1 : 0);
+      add("straight_cross", "Saltire (X Cross)", (x, y) => Math.abs(x * 2 - y) <= 4 || Math.abs((W - 1 - x) * 2 - y) <= 4 ? 1 : 0);
+      add("stripe_downright", "Bend (Top-Left to Bottom-Right)", (x, y) => Math.abs(x * 2 - y) <= 4 ? 1 : 0);
+      add("stripe_downleft", "Bend Sinister (Top-Right to Bottom-Left)", (x, y) => Math.abs((W - 1 - x) * 2 - y) <= 4 ? 1 : 0);
+      add("diagonal_left", "Per Bend Sinister (Top-Left Diagonal)", (x, y) => (x * 2 + y) < 40 ? 1 : 0);
+      add("diagonal_right", "Per Bend (Top-Right Diagonal)", (x, y) => ((W - 1 - x) * 2 + y) < 40 ? 1 : 0);
+      add("diagonal_up_left", "Per Bend Inverted (Bottom-Left Diagonal)", (x, y) => (x * 2 + (H - 1 - y)) < 40 ? 1 : 0);
+      add("diagonal_up_right", "Per Bend Sinister Inverted (Bottom-Right Diagonal)", (x, y) => ((W - 1 - x) * 2 + (H - 1 - y)) < 40 ? 1 : 0);
+
+      // Triangles & Chevrons
+      add("triangle_bottom", "Chevron", (x, y) => y >= 40 - Math.abs(x - 9.5) * 2 ? 1 : 0);
+      add("triangle_top", "Inverted Chevron", (x, y) => y < Math.abs(x - 9.5) * 2 ? 1 : 0);
+      add("triangles_bottom", "Base Indented", (x, y) => y >= 34 + ((x % 4 < 2) ? 0 : 3) ? 1 : 0);
+      add("triangles_top", "Chief Indented", (x, y) => y < 6 - ((x % 4 < 2) ? 0 : 3) ? 1 : 0);
+
+      // Shapes & Borders
+      add("circle", "Roundel (Center Circle)", (x, y) => Math.hypot(x - 9.5, (y - 19.5) * 0.5) <= 4.5 ? 1 : 0);
+      add("rhombus", "Lozenge (Diamond)", (x, y) => (Math.abs(x - 9.5) / 8 + Math.abs(y - 19.5) / 14) <= 1 ? 1 : 0);
+      add("border", "Bordure (Border)", (x, y) => (x < 2 || x >= 18 || y < 2 || y >= 38) ? 1 : 0);
+      add("curly_border", "Bordure Indented", (x, y) => (x < 2 || x >= 18 || y < 2 || y >= 38 || ((x === 2 || x === 17) && y % 3 === 0)) ? 1 : 0);
+      add("square_bottom_left", "Base Dexter Canton", (x, y) => (x < 8 && y >= 30) ? 1 : 0);
+      add("square_bottom_right", "Base Sinister Canton", (x, y) => (x >= 12 && y >= 30) ? 1 : 0);
+      add("square_top_left", "Chief Dexter Canton", (x, y) => (x < 8 && y < 10) ? 1 : 0);
+      add("square_top_right", "Chief Sinister Canton", (x, y) => (x >= 12 && y < 10) ? 1 : 0);
+      add("small_stripes", "Paly (Vertical Stripes)", (x, y) => (x % 5 < 2) ? 1 : 0);
+
+      // Gradients
+      add("gradient", "Gradient (Top-Down)", (x, y) => 1 - y / (H - 1));
+      add("gradient_up", "Base Gradient (Bottom-Up)", (x, y) => y / (H - 1));
+
+      return list;
+    }
+
+    const PATTERNS = buildPatterns();
+    let loadedImage = null;
+
+    document.getElementById("imgInput").addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const img = new Image();
+      img.onload = () => {
+        loadedImage = img;
+        drawTarget();
+      };
+      img.src = URL.createObjectURL(file);
+    });
+
+    document.getElementById("fitMode").addEventListener("change", () => { if (loadedImage) drawTarget(); });
+
+    function drawTarget() {
+      const canvas = document.getElementById("targetCanvas");
+      const ctx = canvas.getContext("2d");
+      ctx.fillStyle = "#1d1d21";
+      ctx.fillRect(0, 0, W, H);
+      if (!loadedImage) return;
+
+      const mode = document.getElementById("fitMode").value;
+      const iw = loadedImage.width, ih = loadedImage.height;
+      const targetRatio = W / H, imgRatio = iw / ih;
+
+      if (mode === "stretch") {
+        ctx.drawImage(loadedImage, 0, 0, W, H);
+      } else if (mode === "cover") {
+        let sx = 0, sy = 0, sw = iw, sh = ih;
+        if (imgRatio > targetRatio) {
+          sw = ih * targetRatio;
+          sx = (iw - sw) / 2;
+        } else {
+          sh = iw / targetRatio;
+          sy = (ih - sh) / 2;
+        }
+        ctx.drawImage(loadedImage, sx, sy, sw, sh, 0, 0, W, H);
+      } else {
+        let dw = W, dh = H, dx = 0, dy = 0;
+        if (imgRatio > targetRatio) {
+          dh = W / imgRatio;
+          dy = (H - dh) / 2;
+        } else {
+          dw = H * imgRatio;
+          dx = (W - dw) / 2;
+        }
+        ctx.drawImage(loadedImage, dx, dy, dw, dh);
+      }
+    }
+
+    function computeError(buf, target) {
+      let err = 0;
+      for (let i = 0; i < W * H * 3; i += 3) {
+        const dr = buf[i] - target[i];
+        const dg = buf[i + 1] - target[i + 1];
+        const db = buf[i + 2] - target[i + 2];
+        // Weighted perceptual RGB distance
+        err += 0.3 * dr * dr + 0.59 * dg * dg + 0.11 * db * db;
+      }
+      return err;
+    }
+
+    function applyLayer(baseBuf, mask, rgb) {
+      const out = new Uint8ClampedArray(baseBuf.length);
+      for (let p = 0; p < W * H; p++) {
+        const a = mask[p];
+        const idx = p * 3;
+        if (a === 0) {
+          out[idx] = baseBuf[idx];
+          out[idx + 1] = baseBuf[idx + 1];
+          out[idx + 2] = baseBuf[idx + 2];
+        } else {
+          out[idx]     = baseBuf[idx]     * (1 - a) + rgb[0] * a;
+          out[idx + 1] = baseBuf[idx + 1] * (1 - a) + rgb[1] * a;
+          out[idx + 2] = baseBuf[idx + 2] * (1 - a) + rgb[2] * a;
+        }
+      }
+      return out;
+    }
+
+    document.getElementById("generateBtn").addEventListener("click", () => {
+      if (!loadedImage) return alert("Please upload an image first.");
+      drawTarget();
+
+      const tCtx = document.getElementById("targetCanvas").getContext("2d");
+      const raw = tCtx.getImageData(0, 0, W, H).data;
+      const target = new Uint8ClampedArray(W * H * 3);
+      for (let p = 0; p < W * H; p++) {
+        target[p * 3]     = raw[p * 4];
+        target[p * 3 + 1] = raw[p * 4 + 1];
+        target[p * 3 + 2] = raw[p * 4 + 2];
+      }
+
+      const maxLayers = parseInt(document.getElementById("maxLayers").value, 10);
+      const BEAM_WIDTH = 6;
+
+      // Step 0: Evaluate all 16 base banner colors
+      let beam = DYES.map(dye => {
+        const buf = new Uint8ClampedArray(W * H * 3);
+        for (let p = 0; p < W * H; p++) {
+          buf[p * 3] = dye.rgb[0];
+          buf[p * 3 + 1] = dye.rgb[1];
+          buf[p * 3 + 2] = dye.rgb[2];
+        }
+        return { base: dye, layers: [], buf, error: computeError(buf, target) };
+      }).sort((a, b) => a.error - b.error).slice(0, BEAM_WIDTH);
+
+      // Steps 1..N: Beam search over all (pattern, dye) combinations
+      for (let step = 0; step < maxLayers; step++) {
+        const candidates = [];
+        for (const state of beam) {
+          candidates.push(state); // Allow stopping early if no layer improves score
+          for (const pat of PATTERNS) {
+            for (const dye of DYES) {
+              const nextBuf = applyLayer(state.buf, pat.mask, dye.rgb);
+              const err = computeError(nextBuf, target);
+              candidates.push({
+                base: state.base,
+                layers: [...state.layers, { pattern: pat, dye }],
+                buf: nextBuf,
+                error: err
+              });
+            }
+          }
+        }
+        candidates.sort((a, b) => a.error - b.error);
+        beam = candidates.slice(0, BEAM_WIDTH);
+      }
+
+      const best = beam[0];
+      renderResult(best);
+    });
+
+    function renderResult(best) {
+      const rCanvas = document.getElementById("resultCanvas");
+      const rCtx = rCanvas.getContext("2d");
+      const imgData = rCtx.createImageData(W, H);
+      for (let p = 0; p < W * H; p++) {
+        imgData.data[p * 4]     = best.buf[p * 3];
+        imgData.data[p * 4 + 1] = best.buf[p * 3 + 1];
+        imgData.data[p * 4 + 2] = best.buf[p * 3 + 2];
+        imgData.data[p * 4 + 3] = 255;
+      }
+      rCtx.putImageData(imgData, 0, 0);
+
+      // Render Loom steps
+      const stepsEl = document.getElementById("stepsList");
+      stepsEl.innerHTML = "";
+      const addStep = (label, rgb) => {
+        const div = document.createElement("div");
+        div.className = "step-item";
+        div.innerHTML = `<span class="swatch" style="background: rgb(${rgb.join(",")})"></span><span>${label}</span>`;
+        stepsEl.appendChild(div);
+      };
+
+      addStep(`Base: <b>${best.base.name} Banner</b>`, best.base.rgb);
+      best.layers.forEach((l, i) => {
+        addStep(`${i + 1}. <b>${l.dye.name}</b> — ${l.pattern.name}`, l.dye.rgb);
+      });
+
+      // Build Java 1.21+ /give command
+      const patternNbt = best.layers
+        .map(l => `{pattern:"minecraft:${l.pattern.id}",color:"${l.dye.id}"}`)
+        .join(",");
+      document.getElementById("cmdOutput").value =
+        `/give @p minecraft:${best.base.id}_banner[minecraft:banner_patterns=[${patternNbt}]] 1`;
+    }
+  </script>
+</body>
+</html>
