@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>MC Vanilla Banner Generator v3 (Original Image Match)</title>
+  <title>MC Vanilla Banner Generator v3.1 (Fast Worker)</title>
   <style>
     :root {
       --bg: #0c0c10;
@@ -71,6 +71,7 @@
       font-weight: 600;
     }
     button.primary:hover { background: var(--accent2); }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
     .preview-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -124,8 +125,8 @@
 <body>
   <div class="container">
     <div class="card">
-      <h1>Minecraft Vanilla Banner Generator <span style="color:var(--accent2);font-size:0.9rem;">v3 Original-Size Solver</span></h1>
-      <p class="sub">Evaluates banner layers directly against the uploaded image resolution & aspect ratio using OKLab + edge loss.</p>
+      <h1>Minecraft Vanilla Banner Generator <span style="color:var(--accent2);font-size:0.9rem;">v3.1 Worker Solver</span></h1>
+      <p class="sub">Runs in a background Web Worker so the UI stays responsive while matching against the uploaded image.</p>
 
       <div class="controls">
         <input type="file" id="imgInput" accept="image/*" />
@@ -148,8 +149,8 @@
 
       <div class="sliders">
         <div class="slider-box">
-          <label><span>Max Eval Width</span><span id="maxWVal">100 px</span></label>
-          <input type="range" id="maxEvalW" min="40" max="160" step="10" value="100" />
+          <label><span>Max Eval Width</span><span id="maxWVal">50 px</span></label>
+          <input type="range" id="maxEvalW" min="20" max="120" step="10" value="50" />
         </div>
         <div class="slider-box">
           <label><span>Contrast</span><span id="contrastVal">1.35×</span></label>
@@ -193,24 +194,6 @@
     const BANNER_W = 20, BANNER_H = 40;
     const el = id => document.getElementById(id);
 
-    function srgbToOklab(r8, g8, b8) {
-      let r = r8 / 255, g = g8 / 255, b = b8 / 255;
-      r = r > 0.04045 ? Math.pow((r + 0.055) / 1.055, 2.4) : r / 12.92;
-      g = g > 0.04045 ? Math.pow((g + 0.055) / 1.055, 2.4) : g / 12.92;
-      b = b > 0.04045 ? Math.pow((b + 0.055) / 1.055, 2.4) : b / 12.92;
-
-      const l = 0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b;
-      const m = 0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b;
-      const s = 0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b;
-
-      const l_ = Math.cbrt(l), m_ = Math.cbrt(m), s_ = Math.cbrt(s);
-      return [
-        0.2104542553 * l_ + 0.7936177850 * m_ - 0.0040720468 * s_,
-        1.9779984951 * l_ - 2.4285922050 * m_ + 0.4505937099 * s_,
-        0.0259040371 * l_ + 0.7827717662 * m_ - 0.8086757660 * s_
-      ];
-    }
-
     const DYES = [
       { id: "white",      name: "White",      rgb: [249, 255, 254] },
       { id: "orange",     name: "Orange",     rgb: [249, 128, 29]  },
@@ -228,9 +211,8 @@
       { id: "green",      name: "Green",      rgb: [94, 124, 22]   },
       { id: "red",        name: "Red",        rgb: [176, 46, 38]   },
       { id: "black",      name: "Black",      rgb: [29, 29, 33]    }
-    ].map(d => ({ ...d, lab: srgbToOklab(...d.rgb) }));
+    ];
 
-    // Base 20x40 pattern definitions
     const PATTERN_DEFS = [
       ["stripe_bottom", "Base (Bottom Stripe)", (x, y) => y >= 30 ? 1 : 0],
       ["stripe_top", "Chief (Top Stripe)", (x, y) => y < 10 ? 1 : 0],
@@ -271,7 +253,6 @@
       ["gradient_up", "Base Gradient (Bottom-Up)", (x, y) => y / (BANNER_H - 1)]
     ];
 
-    // Build pattern masks for a given evaluation grid (w x h) by sampling banner coordinates (0..20, 0..40)
     function buildScaledPatterns(w, h) {
       return PATTERN_DEFS.map(([id, name, fn]) => {
         const mask = new Float32Array(w * h);
@@ -286,9 +267,126 @@
       });
     }
 
+    const workerCode = `
+      function srgbToOklab(r8, g8, b8) {
+        let r = r8 / 255, g = g8 / 255, b = b8 / 255;
+        r = r > 0.04045 ? Math.pow((r + 0.055) / 1.055, 2.4) : r / 12.92;
+        g = g > 0.04045 ? Math.pow((g + 0.055) / 1.055, 2.4) : g / 12.92;
+        b = b > 0.04045 ? Math.pow((b + 0.055) / 1.055, 2.4) : b / 12.92;
+        const l = 0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b;
+        const m = 0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b;
+        const s = 0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b;
+        const l_ = Math.cbrt(l), m_ = Math.cbrt(m), s_ = Math.cbrt(s);
+        return [
+          0.2104542553 * l_ + 0.7936177850 * m_ - 0.0040720468 * s_,
+          1.9779984951 * l_ - 2.4285922050 * m_ + 0.4505937099 * s_,
+          0.0259040371 * l_ + 0.7827717662 * m_ - 0.8086757660 * s_
+        ];
+      }
+
+      self.onmessage = (e) => {
+        const { w, h, dyes, patterns, targetRgba, maxLayers, edgeWeight } = e.data;
+        const n = w * h;
+        const dyesLab = dyes.map(d => ({ ...d, lab: srgbToOklab(...d.rgb) }));
+
+        const targetLab = new Float32Array(n * 3);
+        const targetLum = new Float32Array(n);
+        for (let p = 0; p < n; p++) {
+          const [L, a, b] = srgbToOklab(targetRgba[p * 4], targetRgba[p * 4 + 1], targetRgba[p * 4 + 2]);
+          targetLab[p * 3] = L;
+          targetLab[p * 3 + 1] = a;
+          targetLab[p * 3 + 2] = b;
+          targetLum[p] = L;
+        }
+
+        function lossOf(buf) {
+          const lum = new Float32Array(n);
+          let err = 0;
+          for (let p = 0; p < n; p++) {
+            const [L, a, b] = srgbToOklab(buf[p * 3], buf[p * 3 + 1], buf[p * 3 + 2]);
+            lum[p] = L;
+            const dL = (L - targetLab[p * 3]) * 1.15;
+            const da = (a - targetLab[p * 3 + 1]) * 1.35;
+            const db = (b - targetLab[p * 3 + 2]) * 1.35;
+            err += dL * dL + da * da + db * db;
+          }
+          if (edgeWeight > 0) {
+            let edgeErr = 0;
+            for (let y = 0; y < h - 1; y++) {
+              for (let x = 0; x < w - 1; x++) {
+                const p = y * w + x;
+                edgeErr += (lum[p + 1] - lum[p] - (targetLum[p + 1] - targetLum[p])) ** 2
+                         + (lum[p + w] - lum[p] - (targetLum[p + w] - targetLum[p])) ** 2;
+              }
+            }
+            err += (edgeWeight * edgeErr * n) / Math.max(1, (w - 1) * (h - 1));
+          }
+          return err / n;
+        }
+
+        function applyMask(buf, mask, rgb) {
+          const out = new Uint8ClampedArray(buf.length);
+          for (let p = 0; p < n; p++) {
+            const a = mask[p];
+            const idx = p * 3;
+            out[idx]     = buf[idx]     * (1 - a) + rgb[0] * a;
+            out[idx + 1] = buf[idx + 1] * (1 - a) + rgb[1] * a;
+            out[idx + 2] = buf[idx + 2] * (1 - a) + rgb[2] * a;
+          }
+          return out;
+        }
+
+        function sim(baseIdx, layerPairs) {
+          let buf = new Uint8ClampedArray(n * 3);
+          const brgb = dyes[baseIdx].rgb;
+          for (let p = 0; p < n; p++) {
+            buf[p * 3] = brgb[0]; buf[p * 3 + 1] = brgb[1]; buf[p * 3 + 2] = brgb[2];
+          }
+          const stepLosses = [lossOf(buf)];
+          for (const [patIdx, dyeIdx] of layerPairs) {
+            buf = applyMask(buf, patterns[patIdx].mask, dyes[dyeIdx].rgb);
+            stepLosses.push(lossOf(buf));
+          }
+          return { baseIdx, layers: layerPairs.slice(), loss: stepLosses[stepLosses.length - 1], stepLosses };
+        }
+
+        const BEAM = 10;
+        let beam = dyes.map((_, bi) => sim(bi, [])).sort((a, b) => a.loss - b.loss).slice(0, BEAM);
+
+        for (let step = 0; step < maxLayers; step++) {
+          self.postMessage({ type: "progress", text: "Solving layer " + (step + 1) + " of " + maxLayers + "..." });
+          const cands = [];
+          for (const st of beam) {
+            for (let pi = 0; pi < patterns.length; pi++) {
+              for (let di = 0; di < dyes.length; di++) {
+                cands.push(sim(st.baseIdx, [...st.layers, [pi, di]]));
+              }
+            }
+          }
+          cands.sort((a, b) => a.loss - b.loss);
+          const next = [];
+          const counts = new Map();
+          for (const c of cands) {
+            const cnt = counts.get(c.baseIdx) || 0;
+            if (cnt < 3) {
+              next.push(c);
+              counts.set(c.baseIdx, cnt + 1);
+              if (next.length >= BEAM) break;
+            }
+          }
+          beam = next;
+        }
+
+        self.postMessage({ type: "done", best: beam[0] });
+      };
+    `;
+
+    const workerBlob = new Blob([workerCode], { type: "application/javascript" });
+    const workerUrl = URL.createObjectURL(workerBlob);
+    let activeWorker = null;
+
     let loadedImage = null;
     let evalW = BANNER_W, evalH = BANNER_H;
-    let scaledPatterns = buildScaledPatterns(evalW, evalH);
 
     ["maxEvalW", "contrast", "posterize", "edgeWeight"].forEach(id => {
       el(id).addEventListener("input", () => {
@@ -313,33 +411,27 @@
         loadedImage = img;
         prepareTarget();
         el("statusText").textContent =
-          `Loaded ${img.width}×${img.height} image. Ready to solve at ${evalW}×${evalH} evaluation grid.`;
+          `Loaded ${img.width}×${img.height} image. Ready to solve at ${evalW}×${evalH}.`;
       };
       img.src = URL.createObjectURL(file);
     });
 
     function computeEvalDimensions(img) {
-      if (!img || el("matchMode").value === "native20x40") {
-        return { w: BANNER_W, h: BANNER_H };
-      }
+      if (!img || el("matchMode").value === "native20x40") return { w: BANNER_W, h: BANNER_H };
       const maxW = parseInt(el("maxEvalW").value, 10);
       const maxH = maxW * 2;
-      let w = img.width;
-      let h = img.height;
-      const scale = Math.min(1, maxW / w, maxH / h);
-      w = Math.max(10, Math.round(w * scale));
-      h = Math.max(20, Math.round(h * scale));
-      return { w, h };
+      const scale = Math.min(1, maxW / img.width, maxH / img.height);
+      return {
+        w: Math.max(10, Math.round(img.width * scale)),
+        h: Math.max(20, Math.round(img.height * scale))
+      };
     }
 
     function prepareTarget() {
       if (!loadedImage) return;
       const dims = computeEvalDimensions(loadedImage);
-      if (dims.w !== evalW || dims.h !== evalH) {
-        evalW = dims.w;
-        evalH = dims.h;
-        scaledPatterns = buildScaledPatterns(evalW, evalH);
-      }
+      evalW = dims.w;
+      evalH = dims.h;
 
       const canvas = el("targetCanvas");
       canvas.width = evalW;
@@ -351,8 +443,7 @@
 
       const mode = el("fitMode").value;
       const iw = loadedImage.width, ih = loadedImage.height;
-      const targetRatio = evalW / evalH;
-      const imgRatio = iw / ih;
+      const targetRatio = evalW / evalH, imgRatio = iw / ih;
 
       if (mode === "stretch") {
         ctx.drawImage(loadedImage, 0, 0, evalW, evalH);
@@ -385,99 +476,20 @@
       }
     }
 
-    function extractLightness(buf, n) {
-      const lum = new Float32Array(n);
-      for (let p = 0; p < n; p++) {
-        lum[p] = srgbToOklab(buf[p * 3], buf[p * 3 + 1], buf[p * 3 + 2])[0];
-      }
-      return lum;
-    }
-
-    function computeLoss(buf, lum, targetLab, targetLum, edgeWeight) {
-      const n = evalW * evalH;
-      let loss = 0;
-
-      for (let p = 0; p < n; p++) {
-        const [L, a, b] = srgbToOklab(buf[p * 3], buf[p * 3 + 1], buf[p * 3 + 2]);
-        const dL = (L - targetLab[p * 3]) * 1.15;
-        const da = (a - targetLab[p * 3 + 1]) * 1.35;
-        const db = (b - targetLab[p * 3 + 2]) * 1.35;
-        loss += dL * dL + da * da + db * db;
-      }
-
-      if (edgeWeight > 0) {
-        let edgeLoss = 0;
-        for (let y = 0; y < evalH - 1; y++) {
-          for (let x = 0; x < evalW - 1; x++) {
-            const p = y * evalW + x;
-            const gxCur = lum[p + 1] - lum[p];
-            const gyCur = lum[p + evalW] - lum[p];
-            const gxTgt = targetLum[p + 1] - targetLum[p];
-            const gyTgt = targetLum[p + evalW] - targetLum[p];
-            edgeLoss += (gxCur - gxTgt) ** 2 + (gyCur - gyTgt) ** 2;
-          }
-        }
-        loss += (edgeWeight * edgeLoss * n) / Math.max(1, (evalW - 1) * (evalH - 1));
-      }
-
-      return loss / n;
-    }
-
-    function applyLayer(baseBuf, mask, rgb) {
-      const out = new Uint8ClampedArray(baseBuf.length);
-      const n = evalW * evalH;
-      for (let p = 0; p < n; p++) {
-        const a = mask[p];
-        const idx = p * 3;
-        if (a === 0) {
-          out[idx] = baseBuf[idx];
-          out[idx + 1] = baseBuf[idx + 1];
-          out[idx + 2] = baseBuf[idx + 2];
-        } else {
-          out[idx]     = baseBuf[idx]     * (1 - a) + rgb[0] * a;
-          out[idx + 1] = baseBuf[idx + 1] * (1 - a) + rgb[1] * a;
-          out[idx + 2] = baseBuf[idx + 2] * (1 - a) + rgb[2] * a;
-        }
-      }
-      return out;
-    }
-
-    function simulateSequence(baseDye, layers, targetLab, targetLum, edgeWeight) {
-      const n = evalW * evalH;
+    function renderResult(best) {
+      const nativePatterns = buildScaledPatterns(BANNER_W, BANNER_H);
+      const n = BANNER_W * BANNER_H;
+      const baseDye = DYES[best.baseIdx];
       let buf = new Uint8ClampedArray(n * 3);
       for (let p = 0; p < n; p++) {
-        buf[p * 3]     = baseDye.rgb[0];
-        buf[p * 3 + 1] = baseDye.rgb[1];
-        buf[p * 3 + 2] = baseDye.rgb[2];
+        buf[p * 3] = baseDye.rgb[0]; buf[p * 3 + 1] = baseDye.rgb[1]; buf[p * 3 + 2] = baseDye.rgb[2];
       }
-      const stepLosses = [computeLoss(buf, extractLightness(buf, n), targetLab, targetLum, edgeWeight)];
-      for (const layer of layers) {
-        buf = applyLayer(buf, layer.pattern.mask, layer.dye.rgb);
-        stepLosses.push(computeLoss(buf, extractLightness(buf, n), targetLab, targetLum, edgeWeight));
-      }
-      return {
-        base: baseDye,
-        layers: layers.slice(),
-        loss: stepLosses[stepLosses.length - 1],
-        stepLosses
-      };
-    }
 
-    function renderBanner20x40(best) {
-      let buf = new Uint8ClampedArray(BANNER_W * BANNER_H * 3);
-      const n = BANNER_W * BANNER_H;
-      for (let p = 0; p < n; p++) {
-        buf[p * 3]     = best.base.rgb[0];
-        buf[p * 3 + 1] = best.base.rgb[1];
-        buf[p * 3 + 2] = best.base.rgb[2];
-      }
-      const nativePatterns = buildScaledPatterns(BANNER_W, BANNER_H);
-      const byId = new Map(nativePatterns.map(p => [p.id, p]));
-      for (const l of best.layers) {
-        const pat = byId.get(l.pattern.id);
+      const resolvedLayers = best.layers.map(([pi, di]) => ({ pattern: nativePatterns[pi], dye: DYES[di] }));
+      for (const l of resolvedLayers) {
         const next = new Uint8ClampedArray(n * 3);
         for (let p = 0; p < n; p++) {
-          const a = pat.mask[p];
+          const a = l.pattern.mask[p];
           const idx = p * 3;
           next[idx]     = buf[idx]     * (1 - a) + l.dye.rgb[0] * a;
           next[idx + 1] = buf[idx + 1] * (1 - a) + l.dye.rgb[1] * a;
@@ -496,85 +508,7 @@
         imgData.data[p * 4 + 3] = 255;
       }
       rCtx.putImageData(imgData, 0, 0);
-    }
 
-    el("generateBtn").addEventListener("click", () => {
-      if (!loadedImage) {
-        el("statusText").textContent = "Please upload an image first.";
-        return;
-      }
-      prepareTarget();
-      const n = evalW * evalH;
-      const tCtx = el("targetCanvas").getContext("2d");
-      const raw = tCtx.getImageData(0, 0, evalW, evalH).data;
-      const targetRgb = new Uint8ClampedArray(n * 3);
-      const targetLab = new Float32Array(n * 3);
-      for (let p = 0; p < n; p++) {
-        const r = raw[p * 4], g = raw[p * 4 + 1], b = raw[p * 4 + 2];
-        targetRgb[p * 3] = r;
-        targetRgb[p * 3 + 1] = g;
-        targetRgb[p * 3 + 2] = b;
-        const lab = srgbToOklab(r, g, b);
-        targetLab[p * 3] = lab[0];
-        targetLab[p * 3 + 1] = lab[1];
-        targetLab[p * 3 + 2] = lab[2];
-      }
-      const targetLum = extractLightness(targetRgb, n);
-      const edgeWeight = Number(el("edgeWeight").value);
-      const maxLayers = parseInt(el("maxLayers").value, 10);
-      const BEAM_WIDTH = 12;
-
-      let beam = DYES.map(dye => simulateSequence(dye, [], targetLab, targetLum, edgeWeight))
-        .sort((a, b) => a.loss - b.loss)
-        .slice(0, BEAM_WIDTH);
-
-      for (let step = 0; step < maxLayers; step++) {
-        const candidates = [];
-        for (const state of beam) {
-          for (const pat of scaledPatterns) {
-            for (const dye of DYES) {
-              candidates.push(
-                simulateSequence(state.base, [...state.layers, { pattern: pat, dye }], targetLab, targetLum, edgeWeight)
-              );
-            }
-          }
-        }
-        candidates.sort((a, b) => a.loss - b.loss);
-        const nextBeam = [];
-        const baseCounts = new Map();
-        for (const cand of candidates) {
-          const cnt = baseCounts.get(cand.base.id) || 0;
-          if (cnt < 4) {
-            nextBeam.push(cand);
-            baseCounts.set(cand.base.id, cnt + 1);
-            if (nextBeam.length >= BEAM_WIDTH) break;
-          }
-        }
-        beam = nextBeam;
-      }
-
-      let best = beam[0];
-      for (let pass = 0; pass < 2; pass++) {
-        let improved = false;
-        for (let idx = 0; idx < best.layers.length; idx++) {
-          const orig = best.layers[idx];
-          for (const pat of scaledPatterns) {
-            for (const dye of DYES) {
-              if (pat.id === orig.pattern.id && dye.id === orig.dye.id) continue;
-              const trial = best.layers.slice();
-              trial[idx] = { pattern: pat, dye };
-              const sim = simulateSequence(best.base, trial, targetLab, targetLum, edgeWeight);
-              if (sim.loss < best.loss - 1e-6) {
-                best = sim;
-                improved = true;
-              }
-            }
-          }
-        }
-        if (!improved) break;
-      }
-
-      renderBanner20x40(best);
       const stepsEl = el("stepsList");
       stepsEl.innerHTML = "";
       const initialLoss = best.stepLosses[0] || 1;
@@ -591,19 +525,57 @@
         stepsEl.appendChild(div);
       };
 
-      addStep(`Base: <b>${best.base.name} Banner</b>`, best.base.rgb);
-      best.layers.forEach((l, i) => {
+      addStep(`Base: <b>${baseDye.name} Banner</b>`, baseDye.rgb);
+      resolvedLayers.forEach((l, i) => {
         const pct = (((best.stepLosses[i] - best.stepLosses[i + 1]) / initialLoss) * 100).toFixed(1);
         addStep(`${i + 1}. <b>${l.dye.name}</b> — ${l.pattern.name}`, l.dye.rgb, `-${pct}% err`);
       });
 
-      const patternNbt = best.layers
+      const patternNbt = resolvedLayers
         .map(l => `{pattern:"minecraft:${l.pattern.id}",color:"${l.dye.id}"}`)
         .join(",");
       el("cmdOutput").value =
-        `/give @p minecraft:${best.base.id}_banner[minecraft:banner_patterns=[${patternNbt}]] 1`;
-      el("statusText").textContent =
-        `Solved at ${evalW}×${evalH} (from ${loadedImage.width}×${loadedImage.height}) with ${best.layers.length} layers.`;
+        `/give @p minecraft:${baseDye.id}_banner[minecraft:banner_patterns=[${patternNbt}]] 1`;
+    }
+
+    el("generateBtn").addEventListener("click", () => {
+      if (!loadedImage) {
+        el("statusText").textContent = "Please upload an image first.";
+        return;
+      }
+      prepareTarget();
+      if (activeWorker) activeWorker.terminate();
+
+      const tCtx = el("targetCanvas").getContext("2d");
+      const targetRgba = tCtx.getImageData(0, 0, evalW, evalH).data;
+      const scaledPatterns = buildScaledPatterns(evalW, evalH).map(p => ({ id: p.id, name: p.name, mask: p.mask }));
+
+      el("generateBtn").disabled = true;
+      el("statusText").textContent = `Starting solver on ${evalW}×${evalH} grid...`;
+
+      activeWorker = new Worker(workerUrl);
+      activeWorker.onmessage = (ev) => {
+        if (ev.data.type === "progress") {
+          el("statusText").textContent = ev.data.text;
+        } else if (ev.data.type === "done") {
+          renderResult(ev.data.best);
+          el("statusText").textContent =
+            `Done! Solved at ${evalW}×${evalH} (from ${loadedImage.width}×${loadedImage.height}).`;
+          el("generateBtn").disabled = false;
+          activeWorker.terminate();
+          activeWorker = null;
+        }
+      };
+
+      activeWorker.postMessage({
+        w: evalW,
+        h: evalH,
+        dyes: DYES,
+        patterns: scaledPatterns,
+        targetRgba,
+        maxLayers: parseInt(el("maxLayers").value, 10),
+        edgeWeight: Number(el("edgeWeight").value)
+      });
     });
   </script>
 </body>
